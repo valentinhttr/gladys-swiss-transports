@@ -1,0 +1,72 @@
+# Swiss Transports guide
+
+External integration for Gladys Assistant 5.2 or newer, using the official SDK 0.15. Uses the [Transport API](https://transport.opendata.ch/docs.html) without an API key, account or provider authentication. Transport tag: **cloud**. Internet access is required.
+
+## Setup
+
+The image `ghcr.io/valentinhttr/gladys-swiss-transports:1.0.0` named in the manifest has not been published. Build a local image on Gladys' Docker engine and adjust a copy of the manifest, or publish the intended image before installation. Install through Gladys' integration developer mode. See the [README](../README.md) for build commands and workflows.
+
+| Setting            | Default  | Meaning                                        |
+| ------------------ | -------- | ---------------------------------------------- |
+| `station`          | Lausanne | Monitored station name or ID                   |
+| `destination`      | empty    | Optional route destination                     |
+| `transportation`   | all      | All, train, tram, bus, ship or cableway        |
+| `poll_frequency`   | 60       | Polling interval, 30–3600 seconds              |
+| `departure_window` | 10       | Departure alert window, 1–120 minutes          |
+| `delay_threshold`  | 5        | Delay alert threshold, 1–120 minutes           |
+| `limit`            | 8        | Number of departures/connections observed, 1–8 |
+
+Use **Find a station ID** to resolve ambiguous names. Keep IDs as strings, including leading zeros. **Test the API** looks up the configured station. **Refresh timetables** updates the monitored data while respecting the shared cache.
+
+Add the discovered station and optional route devices in Gladys. Monitoring runs even before devices are adopted; adoption makes the station available in scene device filters. Changing the station, destination or transport mode creates a new device identity. Remove obsolete devices manually. Changing the polling frequency preserves identity.
+
+## Sensors and freshness
+
+Read-only features: `minutes` until next departure, `delay` in minutes (negative means early), `available` (whether a departure exists), `data_valid` (last API read succeeded), `delay_known` (real-time delay is known). Route devices also expose `duration` in minutes. History is disabled.
+
+Missing numeric values are not replaced with invented measurements. Gladys retains the last numerical state. Only use it when **`data_valid = 1` and `available = 1`**, and only use delay when **`delay_known = 1`**. Also check integration health when the container is offline, as feature states may outlive the running integration.
+
+Only changed states are published. Stable values are re-sent at the first refresh after 30 minutes; reconnection, configuration replacement and adding a device also force a fresh publication on the next refresh. The integration owns one monitoring timer.
+
+## Widgets
+
+**Next departures** accepts an optional station and a result limit. **Connections** accepts optional origin and destination plus a result limit. Empty fields use the global configuration. A connection widget without any destination asks for one.
+
+Widgets show Swiss local times (`Europe/Zurich`), platforms, countdowns and known delays. Connections also show arrival, duration and transfers. Missing real-time information is explicitly identified. Empty results and API failures have distinct messages. Up to eight rows, a 30-second TTL and a refresh button are provided. Custom widget stations do not create additional monitoring or scene triggers.
+
+**Find a station ID** opens a native Gladys form in either widget. Enter a name to display the first matches with complete IDs, ready to copy into the settings. Search does not change the widget or monitored station and respects the five-minute cache. Use a more specific name if needed. Early departures are labeled explicitly; inconsistent arrivals and unavailable transfer counts display “—”.
+
+## Scene triggers
+
+- `departure_soon`: a monitored departure is within the configured departure window, including on the first poll.
+- `departure_delayed`: a monitored departure has a known delay at or above the configured threshold.
+
+Optional filters: station device and exact line (for example `IC 1`). Select the station device, not the route device. Without filters, all matching events from this integration are eligible. Triggers monitor the configured station board only.
+
+Each trigger fires once per journey during the running session, even across Gladys reconnects. Container restarts reset deduplication and may emit the same journey again. Raising or lowering a threshold does not re-emit an already recorded journey event. Records expire after departure and are bounded to 5,000 entries.
+
+Event variables: `station`, `destination`, `line`, `departure`, `minutes`, `delay`, `delay_known`, `platform`, `found`. Example Gladys notification text:
+
+```text
+{{triggerEvent.data.line}} to {{triggerEvent.data.destination}} leaves in {{triggerEvent.data.minutes}} minutes from platform {{triggerEvent.data.platform}}.
+```
+
+Polling and result limits bound which journeys can be observed. Busy stations may have more departures in the alert window than the configured limit. Outages and long intervals can cause missed alerts. These are polling-based events, not guaranteed alarms.
+
+## Scene actions
+
+- `next_departure`: optional `station`, defaults to the configured station.
+- `next_connection`: optional `from` and `to`, defaulting to the configured origin/destination. A destination is required somewhere.
+- `refresh`: updates monitored devices and returns `refreshed: true` on success.
+
+The two lookup actions return the event variables listed above. Connection results additionally contain `arrival`, `duration` (minutes) and `transfers`. Timestamps are ISO UTC strings. If no departure is found, `found` is false, strings are empty and `minutes` is -1; missing route duration/transfers use -1. An unknown delay returns `delay_known: false` and a technical `delay: 0` placeholder. Check `found` before using results and `delay_known` before interpreting delay. Provider errors fail the action rather than returning a misleading empty result.
+
+## Network, development and releases
+
+The provider receives station names/IDs, destination and transport filters over HTTPS. API requests time out after 3.5 seconds. Identical requests are coalesced, timetables cached for 30 seconds and station searches for five minutes. Errors are briefly cached. HTTP 429 applies a global cooldown from `Retry-After`, at least 30 seconds. Cache, concurrency and response sizes are bounded.
+
+The Gladys SDK independently requires `GLADYS_HOST_API_URL`, `GLADYS_INTEGRATION_TOKEN` and `GLADYS_INTEGRATION_SELECTOR`, supplied by its supervisor. This is not Transport API authentication. No inbound port or persistent application data is required.
+
+Use `npm ci`, `npm run format:check`, `npm run lint` and `npm test`. Tests are offline. CI runs Node 22 and 24 and builds Docker on pull requests. Store admission checks also require an existing public image; they will fail until the referenced image is published. Build publishes amd64/arm64 images to GHCR. Release updates versions/changelog and calls both image build and GitHub release workflows. Manual image builds never move `latest`.
+
+Source: [Transport API — Opendata.ch](https://transport.opendata.ch/). Timetable data: [opentransportdata.swiss](https://opentransportdata.swiss/). No cancellation is inferred from a journey disappearing. Real-time data can be missing or delayed.

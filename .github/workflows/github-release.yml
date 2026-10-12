@@ -1,0 +1,69 @@
+# -----------------------------------------------------------------------------
+# Publish a GitHub Release for every `vX.Y.Z` tag that has none yet.
+#
+# Gladys links the version shown on the Supervision page to
+# `<repo>/releases?q=X.Y.Z OR vX.Y.Z`: a tag alone shows an empty page there,
+# so every version needs a Release of its own.
+#
+# Idempotent: it only creates what is missing, oldest first, so it can run on
+# every push to main (that is what back-fills the versions published before it
+# existed), by hand, and from release.yml right after a new tag — a tag pushed
+# with the default GITHUB_TOKEN triggers no workflow on its own.
+#
+# Notes come exclusively from the version's CHANGELOG.md section.
+# A missing or empty section fails the workflow; no generated-note fallback.
+# -----------------------------------------------------------------------------
+name: GitHub releases
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: github-releases
+  cancel-in-progress: false
+
+jobs:
+  releases:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the releases
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Create the missing releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+
+          existing="$(gh release list --limit 1000 --json tagName --jq '.[].tagName')"
+          latest="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
+
+          for tag in $(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=v:refname); do
+            if grep -qxF "$tag" <<<"$existing"; then
+              continue
+            fi
+            version="${tag#v}"
+
+            notes_file="$(mktemp)"
+            node .github/scripts/release-notes.mjs "$version" > "$notes_file"
+
+            is_latest=false
+            [ "$tag" = "$latest" ] && is_latest=true
+
+            gh release create "$tag" --verify-tag --title "$tag" --notes-file "$notes_file" --latest="$is_latest"
+            rm -f "$notes_file"
+            echo "Created release $tag"
+          done

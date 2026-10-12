@@ -1,0 +1,719 @@
+{
+  "manifest_version": 1,
+  "type": "device",
+  "name": "Swiss Transports",
+  "description": {
+    "en": "Swiss public transport: departures, connections and delay alerts.",
+    "fr": "Transports publics suisses : départs, itinéraires et alertes de retard."
+  },
+  "version": "1.0.0",
+  "docker_image": "ghcr.io/valentinhttr/gladys-swiss-transports:1.0.0",
+  "gladys_version": ">=5.2.0",
+  "categories": ["services"],
+  "transports": ["cloud"],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": {
+        "en": "Swiss public transport",
+        "fr": "Transports publics suisses"
+      },
+      "description": {
+        "en": "Free Transport API, no account or API key. Internet access required. Times use Europe/Zurich.",
+        "fr": "API Transport gratuite, sans compte ni clé API. Accès Internet requis. Heures Europe/Zurich."
+      },
+      "links": [
+        {
+          "url": "https://transport.opendata.ch/docs.html",
+          "label": {
+            "en": "Transport API documentation",
+            "fr": "Documentation API Transport"
+          }
+        }
+      ]
+    },
+    {
+      "key": "station",
+      "type": "string",
+      "label": {
+        "en": "Station name or ID",
+        "fr": "Nom ou identifiant de gare"
+      },
+      "required": true,
+      "default": "Lausanne",
+      "placeholder": {
+        "en": "Lausanne or 8501120",
+        "fr": "Lausanne ou 8501120"
+      }
+    },
+    {
+      "key": "destination",
+      "type": "string",
+      "label": {
+        "en": "Optional destination",
+        "fr": "Destination facultative"
+      },
+      "default": ""
+    },
+    {
+      "key": "transportation",
+      "type": "select",
+      "label": {
+        "en": "Transport mode",
+        "fr": "Moyen de transport"
+      },
+      "default": "all",
+      "options": [
+        {
+          "value": "all",
+          "label": {
+            "en": "All",
+            "fr": "Tous"
+          }
+        },
+        {
+          "value": "train",
+          "label": {
+            "en": "Train",
+            "fr": "Train"
+          }
+        },
+        {
+          "value": "tram",
+          "label": {
+            "en": "Tram",
+            "fr": "Tram"
+          }
+        },
+        {
+          "value": "bus",
+          "label": {
+            "en": "Bus",
+            "fr": "Bus"
+          }
+        },
+        {
+          "value": "ship",
+          "label": {
+            "en": "Ship",
+            "fr": "Bateau"
+          }
+        },
+        {
+          "value": "cableway",
+          "label": {
+            "en": "Cableway",
+            "fr": "Transport par câble"
+          }
+        }
+      ]
+    },
+    {
+      "key": "poll_frequency",
+      "type": "number",
+      "label": {
+        "en": "Refresh interval (seconds)",
+        "fr": "Rafraîchissement (secondes)"
+      },
+      "default": 60,
+      "min": 30,
+      "max": 3600
+    },
+    {
+      "key": "departure_window",
+      "type": "number",
+      "label": {
+        "en": "Departure alert window (min)",
+        "fr": "Alerte avant le départ (min)"
+      },
+      "default": 10,
+      "min": 1,
+      "max": 120
+    },
+    {
+      "key": "delay_threshold",
+      "type": "number",
+      "label": {
+        "en": "Delay alert threshold (min)",
+        "fr": "Seuil d’alerte retard (min)"
+      },
+      "default": 5,
+      "min": 1,
+      "max": 120
+    },
+    {
+      "key": "limit",
+      "type": "number",
+      "label": {
+        "en": "Number of departures",
+        "fr": "Nombre de départs"
+      },
+      "min": 1,
+      "max": 8,
+      "default": 8
+    }
+  ],
+  "actions": [
+    {
+      "key": "test_api",
+      "label": {
+        "en": "Test the API",
+        "fr": "Tester l’API"
+      },
+      "timeout_seconds": 15
+    },
+    {
+      "key": "search_stations",
+      "label": {
+        "en": "Find a station ID",
+        "fr": "Trouver un identifiant de gare"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "query",
+          "type": "string",
+          "label": {
+            "en": "Station to search",
+            "fr": "Gare à rechercher"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "refresh",
+      "label": {
+        "en": "Refresh timetables",
+        "fr": "Actualiser les horaires"
+      },
+      "timeout_seconds": 15
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "departure_soon",
+      "label": {
+        "en": "Departure approaching",
+        "fr": "Départ imminent"
+      },
+      "description": {
+        "en": "A monitored departure enters the configured alert window, once per journey.",
+        "fr": "Un départ surveillé entre dans la fenêtre d’alerte, une fois par course."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "label": {
+            "en": "Monitored station",
+            "fr": "Gare surveillée"
+          },
+          "source": "devices"
+        },
+        {
+          "key": "line",
+          "type": "string",
+          "label": {
+            "en": "Line (exact match, optional)",
+            "fr": "Ligne (correspondance exacte, facultative)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "found",
+          "type": "boolean",
+          "label": {
+            "en": "Departure found",
+            "fr": "Départ trouvé"
+          }
+        },
+        {
+          "key": "station",
+          "type": "string",
+          "label": {
+            "en": "Station",
+            "fr": "Gare"
+          }
+        },
+        {
+          "key": "destination",
+          "type": "string",
+          "label": {
+            "en": "Destination",
+            "fr": "Destination"
+          }
+        },
+        {
+          "key": "line",
+          "type": "string",
+          "label": {
+            "en": "Line",
+            "fr": "Ligne"
+          }
+        },
+        {
+          "key": "departure",
+          "type": "string",
+          "label": {
+            "en": "Expected departure (ISO)",
+            "fr": "Départ prévu (ISO)"
+          }
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "label": {
+            "en": "Minutes until departure",
+            "fr": "Minutes avant le départ"
+          }
+        },
+        {
+          "key": "delay_known",
+          "type": "boolean",
+          "label": {
+            "en": "Real-time delay available",
+            "fr": "Retard temps réel disponible"
+          }
+        },
+        {
+          "key": "delay",
+          "type": "number",
+          "label": {
+            "en": "Delay in minutes",
+            "fr": "Retard en minutes"
+          }
+        },
+        {
+          "key": "platform",
+          "type": "string",
+          "label": {
+            "en": "Platform",
+            "fr": "Quai"
+          }
+        }
+      ]
+    },
+    {
+      "key": "departure_delayed",
+      "label": {
+        "en": "Departure delayed",
+        "fr": "Départ retardé"
+      },
+      "description": {
+        "en": "A monitored departure reaches the delay threshold, once per journey.",
+        "fr": "Un départ surveillé atteint le seuil de retard, une fois par course."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "label": {
+            "en": "Monitored station",
+            "fr": "Gare surveillée"
+          },
+          "source": "devices"
+        },
+        {
+          "key": "line",
+          "type": "string",
+          "label": {
+            "en": "Line (exact match, optional)",
+            "fr": "Ligne (correspondance exacte, facultative)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "found",
+          "type": "boolean",
+          "label": {
+            "en": "Departure found",
+            "fr": "Départ trouvé"
+          }
+        },
+        {
+          "key": "station",
+          "type": "string",
+          "label": {
+            "en": "Station",
+            "fr": "Gare"
+          }
+        },
+        {
+          "key": "destination",
+          "type": "string",
+          "label": {
+            "en": "Destination",
+            "fr": "Destination"
+          }
+        },
+        {
+          "key": "line",
+          "type": "string",
+          "label": {
+            "en": "Line",
+            "fr": "Ligne"
+          }
+        },
+        {
+          "key": "departure",
+          "type": "string",
+          "label": {
+            "en": "Expected departure (ISO)",
+            "fr": "Départ prévu (ISO)"
+          }
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "label": {
+            "en": "Minutes until departure",
+            "fr": "Minutes avant le départ"
+          }
+        },
+        {
+          "key": "delay_known",
+          "type": "boolean",
+          "label": {
+            "en": "Real-time delay available",
+            "fr": "Retard temps réel disponible"
+          }
+        },
+        {
+          "key": "delay",
+          "type": "number",
+          "label": {
+            "en": "Delay in minutes",
+            "fr": "Retard en minutes"
+          }
+        },
+        {
+          "key": "platform",
+          "type": "string",
+          "label": {
+            "en": "Platform",
+            "fr": "Quai"
+          }
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "next_departure",
+      "label": {
+        "en": "Get next departure",
+        "fr": "Obtenir le prochain départ"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "station",
+          "type": "string",
+          "label": {
+            "en": "Station name or ID",
+            "fr": "Nom ou identifiant de gare"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "found",
+          "type": "boolean",
+          "label": {
+            "en": "Departure found",
+            "fr": "Départ trouvé"
+          }
+        },
+        {
+          "key": "station",
+          "type": "string",
+          "label": {
+            "en": "Station",
+            "fr": "Gare"
+          }
+        },
+        {
+          "key": "destination",
+          "type": "string",
+          "label": {
+            "en": "Destination",
+            "fr": "Destination"
+          }
+        },
+        {
+          "key": "line",
+          "type": "string",
+          "label": {
+            "en": "Line",
+            "fr": "Ligne"
+          }
+        },
+        {
+          "key": "departure",
+          "type": "string",
+          "label": {
+            "en": "Expected departure (ISO)",
+            "fr": "Départ prévu (ISO)"
+          }
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "label": {
+            "en": "Minutes until departure",
+            "fr": "Minutes avant le départ"
+          }
+        },
+        {
+          "key": "delay_known",
+          "type": "boolean",
+          "label": {
+            "en": "Real-time delay available",
+            "fr": "Retard temps réel disponible"
+          }
+        },
+        {
+          "key": "delay",
+          "type": "number",
+          "label": {
+            "en": "Delay in minutes",
+            "fr": "Retard en minutes"
+          }
+        },
+        {
+          "key": "platform",
+          "type": "string",
+          "label": {
+            "en": "Platform",
+            "fr": "Quai"
+          }
+        }
+      ]
+    },
+    {
+      "key": "next_connection",
+      "label": {
+        "en": "Get next connection",
+        "fr": "Obtenir le prochain itinéraire"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "from",
+          "type": "string",
+          "label": {
+            "en": "Departure station",
+            "fr": "Gare de départ"
+          }
+        },
+        {
+          "key": "to",
+          "type": "string",
+          "label": {
+            "en": "Destination name or ID",
+            "fr": "Nom ou identifiant de destination"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "found",
+          "type": "boolean",
+          "label": {
+            "en": "Departure found",
+            "fr": "Départ trouvé"
+          }
+        },
+        {
+          "key": "station",
+          "type": "string",
+          "label": {
+            "en": "Station",
+            "fr": "Gare"
+          }
+        },
+        {
+          "key": "destination",
+          "type": "string",
+          "label": {
+            "en": "Destination",
+            "fr": "Destination"
+          }
+        },
+        {
+          "key": "line",
+          "type": "string",
+          "label": {
+            "en": "Line",
+            "fr": "Ligne"
+          }
+        },
+        {
+          "key": "departure",
+          "type": "string",
+          "label": {
+            "en": "Expected departure (ISO)",
+            "fr": "Départ prévu (ISO)"
+          }
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "label": {
+            "en": "Minutes until departure",
+            "fr": "Minutes avant le départ"
+          }
+        },
+        {
+          "key": "delay_known",
+          "type": "boolean",
+          "label": {
+            "en": "Real-time delay available",
+            "fr": "Retard temps réel disponible"
+          }
+        },
+        {
+          "key": "delay",
+          "type": "number",
+          "label": {
+            "en": "Delay in minutes",
+            "fr": "Retard en minutes"
+          }
+        },
+        {
+          "key": "platform",
+          "type": "string",
+          "label": {
+            "en": "Platform",
+            "fr": "Quai"
+          }
+        },
+        {
+          "key": "arrival",
+          "type": "string",
+          "label": {
+            "en": "Expected arrival (ISO)",
+            "fr": "Arrivée prévue (ISO)"
+          }
+        },
+        {
+          "key": "duration",
+          "type": "number",
+          "label": {
+            "en": "Duration in minutes",
+            "fr": "Durée en minutes"
+          }
+        },
+        {
+          "key": "transfers",
+          "type": "number",
+          "label": {
+            "en": "Transfers",
+            "fr": "Correspondances"
+          }
+        }
+      ]
+    },
+    {
+      "key": "refresh",
+      "label": {
+        "en": "Refresh monitored timetables",
+        "fr": "Actualiser les horaires surveillés"
+      },
+      "timeout_seconds": 15,
+      "outputs": [
+        {
+          "key": "refreshed",
+          "type": "boolean",
+          "label": {
+            "en": "Timetables refreshed",
+            "fr": "Horaires actualisés"
+          }
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "key": "departures",
+      "label": {
+        "en": "Next departures",
+        "fr": "Prochains départs"
+      },
+      "description": {
+        "en": "Departures, platforms and real-time delays.",
+        "fr": "Départs, quais et retards en temps réel."
+      },
+      "icon": "clock",
+      "action_timeout_seconds": 15,
+      "settings": [
+        {
+          "key": "station",
+          "type": "string",
+          "label": {
+            "en": "Station name or ID",
+            "fr": "Nom ou identifiant de gare"
+          }
+        },
+        {
+          "key": "limit",
+          "type": "number",
+          "label": {
+            "en": "Number of departures",
+            "fr": "Nombre de départs"
+          },
+          "min": 1,
+          "max": 8,
+          "default": 8
+        }
+      ]
+    },
+    {
+      "key": "connections",
+      "label": {
+        "en": "Connections",
+        "fr": "Itinéraires"
+      },
+      "description": {
+        "en": "Next connections, arrival times and transfers.",
+        "fr": "Prochains itinéraires, heures d’arrivée et correspondances."
+      },
+      "icon": "map-pin",
+      "action_timeout_seconds": 15,
+      "settings": [
+        {
+          "key": "from",
+          "type": "string",
+          "label": {
+            "en": "Departure station",
+            "fr": "Gare de départ"
+          }
+        },
+        {
+          "key": "to",
+          "type": "string",
+          "label": {
+            "en": "Destination name or ID",
+            "fr": "Nom ou identifiant de destination"
+          }
+        },
+        {
+          "key": "limit",
+          "type": "number",
+          "label": {
+            "en": "Number of departures",
+            "fr": "Nombre de départs"
+          },
+          "min": 1,
+          "max": 8,
+          "default": 8
+        }
+      ]
+    }
+  ],
+  "cover_image": "https://raw.githubusercontent.com/valentinhttr/gladys-swiss-transports/main/cover.jpg"
+}

@@ -1,0 +1,79 @@
+# Guide Swiss Transports
+
+Intégration externe pour Gladys Assistant 5.2 ou ultérieur, utilisant le SDK officiel 0.15.
+
+## Configuration
+
+| Champ              | Défaut   | Utilisation                                                       |
+| ------------------ | -------- | ----------------------------------------------------------------- |
+| `station`          | Lausanne | Nom ou identifiant exact de la gare surveillée                    |
+| `destination`      | vide     | Destination facultative ; active l’appareil trajet                |
+| `transportation`   | all      | Tous, train, tram, bus, bateau ou transport par câble             |
+| `poll_frequency`   | 60       | Intervalle en secondes, entre 30 et 3600                          |
+| `departure_window` | 10       | Déclenchement lorsque le départ est à 10 minutes ou moins ; 1–120 |
+| `delay_threshold`  | 5        | Retard minimal en minutes pour l’alerte ; 1–120                   |
+| `limit`            | 8        | Nombre de départs/itinéraires examinés ; 1–8                      |
+
+Les valeurs sont validées avant leur application. Une destination vide désactive le suivi de trajet. Les changements de gare, destination ou moyen de transport créent une nouvelle identité d’appareil ; supprimer manuellement les anciens appareils dans Gladys si nécessaire. Un changement d’intervalle conserve l’identité.
+
+Le bouton **Tester l’API** recherche la gare configurée. **Trouver un identifiant de gare** renvoie les noms et identifiants, à copier dans les champs de configuration. **Actualiser les horaires** relit les données surveillées et met à jour les capteurs ; le cache reste actif.
+
+## Appareils et fiabilité
+
+Les appareils sont des capteurs virtuels, uniquement en lecture :
+
+- `minutes` : minutes avant le prochain départ, arrondies au supérieur.
+- `delay` : retard en minutes, lorsqu’il est connu ; une valeur négative indique une avance.
+- `available` : 1 si un prochain départ est disponible, 0 si la liste est vide.
+- `data_valid` : 1 après une réponse exploitable, 0 après un échec API.
+- `delay_known` : 1 si le retard du prochain départ est connu, 0 sinon.
+- `duration` : durée du prochain trajet, uniquement sur l’appareil trajet.
+
+Gladys conserve la dernière valeur numérique lorsqu’aucune nouvelle mesure n’est disponible. Pour une scène basée sur un capteur, vérifier **`data_valid = 1` et `available = 1`** ; vérifier aussi **`delay_known = 1`** avant d’utiliser `delay`. Un arrêt du conteneur peut laisser ces dernières valeurs visibles : tenir également compte de l’état de l’intégration. L’historique est désactivé pour ces valeurs volatiles.
+
+## Widgets
+
+**Prochains départs** : gare facultative et nombre de résultats. Sans gare propre au widget, la gare configurée est utilisée.
+
+**Itinéraires** : départ, destination et nombre de résultats. Les champs vides reprennent la configuration globale. Sans destination globale ou locale, le widget invite à en choisir une.
+
+Les widgets montrent les heures suisses, les quais annoncés, les minutes restantes, le retard connu et, pour les itinéraires, l’arrivée et les correspondances. « Temps réel indisponible » distingue l’absence de prévision d’un retard de zéro minute. En cas d’échec, aucun ancien horaire n’est présenté comme une réponse fraîche. Les widgets se rechargent toutes les 30 secondes selon le cache de Gladys et proposent un bouton Actualiser. Chaque widget affiche au maximum huit résultats.
+
+Le bouton **Chercher une gare** ouvre un formulaire natif Gladys. Saisissez un nom : le message de résultat affiche les premières correspondances et leurs identifiants complets, à copier dans les réglages. La recherche ne modifie ni le widget ni la gare surveillée et respecte le cache de cinq minutes. Affinez le nom si les résultats ne suffisent pas.
+
+Une avance est indiquée explicitement. Une arrivée incohérente ou un nombre de correspondances indisponible apparaît comme « — », sans inventer de durée ou de trajet direct. Les valeurs des capteurs inchangées ne sont renvoyées que toutes les 30 minutes ; les changements partent dès le prochain rafraîchissement. Une reconnexion ou une nouvelle configuration réinitialise cette déduplication. Un appareil ajouté reçoit ses valeurs au prochain rafraîchissement.
+
+## Déclencheurs de scène
+
+- **Départ imminent** (`departure_soon`) : un départ de la gare surveillée entre dans la fenêtre configurée. Au premier chargement, les départs déjà dans cette fenêtre déclenchent également l’événement.
+- **Départ retardé** (`departure_delayed`) : un départ surveillé atteint ou dépasse le seuil de retard configuré. Un retard inconnu ne déclenche rien.
+
+Filtres facultatifs : appareil de gare et ligne exacte, par exemple `IC 1`. Choisir l’appareil **gare**, pas l’appareil trajet. Sans filtre, tous les événements correspondants de cette intégration sont éligibles. Les déclencheurs portent sur les départs de la gare, pas sur les widgets indépendants ni sur l’itinéraire.
+
+Chaque type d’événement n’est émis qu’une fois par course pendant la session. La déduplication survit aux reconnexions Gladys, mais pas au redémarrage du conteneur. Un seuil franchi une seconde fois pour la même course ne produit pas de second événement ; un redémarrage peut en produire un. Les identités mémorisées expirent après le départ et sont limitées à 5 000 entrées.
+
+Variables : `station`, `destination`, `line`, `departure`, `minutes`, `delay`, `delay_known`, `platform`, `found`. Exemple de texte dans une action de notification Gladys :
+
+```text
+Le {{triggerEvent.data.line}} pour {{triggerEvent.data.destination}} part dans {{triggerEvent.data.minutes}} minutes, quai {{triggerEvent.data.platform}}.
+```
+
+La cadence et la limite de résultats déterminent les courses observées. Avec huit résultats, une gare très fréquentée ne remonte pas toutes les courses de la fenêtre. Un événement peut être manqué pendant une coupure ou entre deux lectures. Choisir un intervalle adapté ; aucune garantie d’alarme à la seconde près.
+
+## Actions de scène
+
+| Action            | Entrées facultatives | Résultat                                                                 |
+| ----------------- | -------------------- | ------------------------------------------------------------------------ |
+| `next_departure`  | `station`            | Prochain départ de la gare demandée ou configurée                        |
+| `next_connection` | `from`, `to`         | Prochain trajet ; une destination locale ou globale est nécessaire       |
+| `refresh`         | aucune               | Rafraîchit les appareils surveillés ; `refreshed: true` en cas de succès |
+
+Les deux lectures renvoient les mêmes champs que les variables d’événement. `next_connection` ajoute `arrival`, `duration` (minutes) et `transfers`. Les champs `departure` et `arrival` sont des dates ISO UTC. Si aucun résultat n’existe : `found: false`, chaînes vides, `minutes: -1`, et pour un trajet `duration: -1`, `transfers: -1`. Un retard inconnu donne `delay_known: false` avec `delay: 0` comme valeur technique : **ne pas interpréter ce zéro comme une ponctualité confirmée**. Toujours conditionner l’action suivante sur `found`, puis sur `delay_known` si nécessaire. Une erreur API fait échouer l’action, elle ne devient pas un résultat vide.
+
+## Réseau et confidentialité
+
+Seules des requêtes HTTPS vers `transport.opendata.ch` sont envoyées pour le fournisseur. Les noms de gare, destinations, identifiants et filtres lui sont transmis. Aucun compte fournisseur requis. Gladys utilise son propre jeton interne, fourni automatiquement par le superviseur.
+
+Cache horaires de 30 secondes, recherche de 5 minutes, regroupement des requêtes identiques, délai HTTP de 3,5 secondes, mémoire bornée. Une réponse HTTP 429 suspend les nouvelles requêtes selon `Retry-After`, au minimum 30 secondes. Une panne conserve un état dégradé jusqu’à une lecture réussie. Aucun nouvel essai agressif en boucle.
+
+Source : [Transport API](https://transport.opendata.ch/docs.html), données horaires [opentransportdata.swiss](https://opentransportdata.swiss/).
