@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Document the published 1.0.0 image and installation through the integration store or repository URL.
+
 ## [1.0.0] - 2026-10-12
 
 ### Added

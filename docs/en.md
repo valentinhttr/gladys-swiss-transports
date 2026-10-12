@@ -4,7 +4,7 @@ External integration for Gladys Assistant 5.2 or newer, using the official SDK 0
 
 ## Setup
 
-The image `ghcr.io/valentinhttr/gladys-swiss-transports:1.0.0` named in the manifest has not been published. Build a local image on Gladys' Docker engine and adjust a copy of the manifest, or publish the intended image before installation. Install through Gladys' integration developer mode. See the [README](../README.md) for build commands and workflows.
+On Gladys 5.2 or newer, open **Integrations → Install an integration** and search for **Swiss Transports**. Version 1.0.0 has a public image for amd64 and arm64. If the catalog has not indexed it yet, install from the repository URL: https://github.com/valentinhttr/gladys-swiss-transports. Developer mode also accepts the manifest from the repository. See the [README](../README.md) for build commands and workflows.
 
 | Setting            | Default  | Meaning                                        |
 | ------------------ | -------- | ---------------------------------------------- |
@@ -67,6 +67,6 @@ The provider receives station names/IDs, destination and transport filters over 
 
 The Gladys SDK independently requires `GLADYS_HOST_API_URL`, `GLADYS_INTEGRATION_TOKEN` and `GLADYS_INTEGRATION_SELECTOR`, supplied by its supervisor. This is not Transport API authentication. No inbound port or persistent application data is required.
 
-Use `npm ci`, `npm run format:check`, `npm run lint` and `npm test`. Tests are offline. CI runs Node 22 and 24 and builds Docker on pull requests. Store admission checks also require an existing public image; they will fail until the referenced image is published. Build publishes amd64/arm64 images to GHCR. Release updates versions/changelog and calls both image build and GitHub release workflows. Manual image builds never move `latest`.
+Use `npm ci`, `npm run format:check`, `npm run lint` and `npm test`. Tests are offline. CI runs Node 22 and 24 and builds Docker on pull requests. Store admission checks also require an existing public image; new versions must publish their images before these checks pass. Build publishes amd64/arm64 images to GHCR. Release updates versions/changelog and calls both image build and GitHub release workflows. Manual image builds never move `latest`.
 
 Source: [Transport API — Opendata.ch](https://transport.opendata.ch/). Timetable data: [opentransportdata.swiss](https://opentransportdata.swiss/). No cancellation is inferred from a journey disappearing. Real-time data can be missing or delayed.

@@ -5,7 +5,7 @@
 - This is an external Gladys Assistant integration using the official JavaScript SDK. Do not add core Gladys patches or a standalone frontend.
 - Provider: `https://transport.opendata.ch/v1/`, documentation: `https://transport.opendata.ch/docs.html`. No API key or provider authentication. Keep `transports: ["cloud"]`.
 - Do not initialize or create a Git repository, add remotes, publish images, tag or release unless explicitly requested. Workflow definitions are preparation, not authorization to execute them.
-- The repository owner is `valentinhttr`. The manifest names the intended image, which has not been published. Do not claim it exists or add the `gladys-assistant-integration` store topic unless explicitly requested.
+- The repository owner is `valentinhttr`. Version 1.0.0 and its public multi-architecture image are published. The `gladys-assistant-integration` topic is enabled for store discovery. Future publication still requires explicit authorization.
 
 ## Architecture
 

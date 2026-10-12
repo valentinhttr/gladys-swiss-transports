@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes target the latest released 1.x version. The source repository is public, but no Docker image or release has been published yet.
+Security fixes target the latest released 1.x version. Version 1.0.0 is published with a public multi-architecture image.
 
 ## Reporting a vulnerability
 

@@ -2,6 +2,10 @@
 
 Intégration externe pour Gladys Assistant 5.2 ou ultérieur, utilisant le SDK officiel 0.15.
 
+## Installation
+
+Avec Gladys 5.2 ou ultérieur, ouvrez **Intégrations → Installer une intégration** et recherchez **Swiss Transports**. La version 1.0.0 dispose d’une image publique pour amd64 et arm64. Si le catalogue ne l’a pas encore indexée, utilisez l’installation depuis l’URL du dépôt : https://github.com/valentinhttr/gladys-swiss-transports. Le mode développeur accepte aussi le manifeste disponible à la racine du dépôt.
+
 ## Configuration
 
 | Champ              | Défaut   | Utilisation                                                       |

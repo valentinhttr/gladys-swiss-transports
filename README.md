@@ -18,7 +18,9 @@ Swiss public transport timetables powered by the [Transport API](https://transpo
 
 ## Installation and publishing
 
-Source repository: [valentinhttr/gladys-swiss-transports](https://github.com/valentinhttr/gladys-swiss-transports). The manifest targets `ghcr.io/valentinhttr/gladys-swiss-transports:1.0.0`, but **this image has not been published**. No release or version tag has been created, and the repository does not carry the `gladys-assistant-integration` topic used for store discovery.
+Version **1.0.0** is published: [release notes](https://github.com/valentinhttr/gladys-swiss-transports/releases/tag/v1.0.0), [source repository](https://github.com/valentinhttr/gladys-swiss-transports). The public image `ghcr.io/valentinhttr/gladys-swiss-transports:1.0.0` supports `linux/amd64` and `linux/arm64`.
+
+On **Gladys 5.2 or newer**, open **Integrations → Install an integration** and search for **Swiss Transports**. The repository is registered for store discovery; new releases appear after the store's next hourly indexing and your Gladys catalog refresh. If it is not listed yet, install from the repository URL or use the manifest in developer mode.
 
 To build and check locally:
 
@@ -32,13 +34,7 @@ docker build -t gladys-swiss-transports:1.0.0 .
 
 In Gladys developer mode, use a copy of the manifest with `docker_image` pointing to an image accessible to its Docker engine. A locally built image must be available on the same Docker engine as Gladys.
 
-For future image publication, when explicitly requested:
-
-1. Run **Build and publish image** with `image-tag: 1.0.0`, or push the `v1.0.0` tag.
-2. Make the GHCR package public before installing from another machine.
-3. Install the manifest through **Integrations → Install an integration → Developer mode**. The included `cover.jpg` is registered through `cover_image`.
-
-Add the `gladys-assistant-integration` topic only when store listing is requested and admission checks pass.
+The first release has passed the official store admission validator, including anonymous image access and the cover image. The `gladys-assistant-integration` topic enables catalog discovery.
 
 ## Changelog-based releases
 
@@ -83,7 +79,7 @@ Tests run offline and cover caching, limits, HTTP errors, timetable normalizatio
 | `release.yml`        | Version bump, changelog rollover, commit/tag, image publishing and GitHub release         |
 | `github-release.yml` | Creates missing releases from version tags and their changelog sections                   |
 
-Store admission checks also verify that the image exists. They will fail until the referenced image is published and public. Release workflows require GitHub Actions write permissions and branch rules that allow automated release commits.
+Store admission checks also verify that the image exists. A future version must publish its referenced image before admission can pass. Release workflows require GitHub Actions write permissions and branch rules that allow automated release commits.
 
 ## Data source
 
