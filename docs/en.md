@@ -1,10 +1,10 @@
 # Swiss Transports guide
 
-External integration for Gladys Assistant 5.2 or newer, using the official SDK 0.15. Uses the [Transport API](https://transport.opendata.ch/docs.html) without an API key, account or provider authentication. Transport tag: **cloud**. Internet access is required.
+External integration for Gladys Assistant 5.3 or newer, using the official SDK 0.15. Uses the [Transport API](https://transport.opendata.ch/docs.html) without an API key, account or provider authentication. Transport tag: **cloud**. Internet access is required.
 
 ## Setup
 
-On Gladys 5.2 or newer, open **Integrations → Install an integration** and search for **Swiss Transports**. Version 1.0.0 has a public image for amd64 and arm64. If the catalog has not indexed it yet, install from the repository URL: https://github.com/valentinhttr/gladys-swiss-transports. Developer mode also accepts the manifest from the repository. See the [README](../README.md) for build commands and workflows.
+On Gladys 5.3 or newer, open **Integrations → Install an integration** and search for **Swiss Transports**. Version 1.0.0 has a public image for amd64 and arm64. If the catalog has not indexed it yet, install from the repository URL: https://github.com/valentinhttr/gladys-swiss-transports. Developer mode also accepts the manifest from the repository. See the [README](../README.md) for build commands and workflows.
 
 | Setting            | Default  | Meaning                                        |
 | ------------------ | -------- | ---------------------------------------------- |
