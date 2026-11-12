@@ -20,7 +20,7 @@ Swiss public transport timetables powered by the [Transport API](https://transpo
 
 Version **1.0.0** is published: [release notes](https://github.com/valentinhttr/gladys-swiss-transports/releases/tag/v1.0.0), [source repository](https://github.com/valentinhttr/gladys-swiss-transports). The public image `ghcr.io/valentinhttr/gladys-swiss-transports:1.0.0` supports `linux/amd64` and `linux/arm64`.
 
-On **Gladys 5.2 or newer**, open **Integrations → Install an integration** and search for **Swiss Transports**. The repository is registered for store discovery; new releases appear after the store's next hourly indexing and your Gladys catalog refresh. If it is not listed yet, install from the repository URL or use the manifest in developer mode.
+On **Gladys 5.3 or newer**, open **Integrations → Install an integration** and search for **Swiss Transports**. The repository is registered for store discovery; new releases appear after the store's next hourly indexing and your Gladys catalog refresh. If it is not listed yet, install from the repository URL or use the manifest in developer mode.
 
 To build and check locally:
 

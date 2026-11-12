@@ -4,6 +4,9 @@
 
 ### Changed
 
+- Declared for Switzerland only (`countries: ["CH"]`): the Gladys catalog of an
+  instance located elsewhere no longer lists it in its browse views (the
+  search still finds it). Requires Gladys 5.3.0 or later.
 - Document the published 1.0.0 image and installation through the integration store or repository URL.
 
 ## [1.0.0] - 2026-10-12

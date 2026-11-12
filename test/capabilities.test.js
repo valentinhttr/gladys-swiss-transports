@@ -145,7 +145,8 @@ test('manifest matches capabilities, defaults, versions and cloud classification
   assert.deepEqual(keys(manifest.scene_triggers), [...TRIGGERS].sort());
   assert.deepEqual(keys(manifest.widgets), [...WIDGET_KEYS].sort());
   assert.deepEqual(manifest.transports, ['cloud']);
-  assert.equal(manifest.gladys_version, '>=5.2.0');
+  assert.equal(manifest.gladys_version, '>=5.3.0');
+  assert.deepEqual(manifest.countries, ['CH'], 'the catalog countries need Gladys 5.3.0');
   for (const field of manifest.config_schema)
     if ('default' in field) assert.equal(field.default, DEFAULT_CONFIG[field.key]);
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url)));
